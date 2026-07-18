@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; worker-src blob:; connect-src 'none'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>J-PLATPAT特許PDF公報テキスト変換</title>
+<link rel="stylesheet" href="./local_assets/css/app.css">
+</head>
+<body>
+<header class="header-wrap hero-main">
+  <h1>J-PLATPAT特許PDF公報テキスト変換</h1>
+  <p>J-PlatPat由来の公開特許公報・特許公報から本文を抽出します。AIに読みやすいTXTへ変換します。<br>本文が1ページ2段組の旧形式公報
+にも対応しています。</p>
+</header>
+<main>
+  <section class="card">
+    <div class="card-title">
+      <h2>PDF取り込みと変換操作</h2>
+      <span class="section-tag section-upload">UPLOAD</span>
+    </div>
+    <div id="dropZone" class="drop" aria-describedby="dropHelp">
+      <strong>PDFをここにドラッグ＆ドロップ</strong>
+      <small id="dropHelp">または下のボタンから公開特許公報・特許公報PDFを選択してください。選択後はOCRを使わず本文だけを自動変換します。<br>PDFは外部送信されず、このブラウザ内だけで処理されます。</small>
+    </div>
+    <div class="controls-wrap">
+      <div class="function-legend">
+        <div class="legend-item"><b>取込</b><span>PDFファイルを選択して読み込みます。</span></div>
+        <div class="legend-item"><b>自動変換</b><span>PDF選択後すぐにOCRなしで本文整形とプレビュー生成を行います。</span></div>
+        <div class="legend-item"><b>書誌事項OCR</b><span>必要な場合だけボタンで書誌事項・IPC・FI・テーマコードを読み取ります。</span></div>
+        <div class="legend-item"><b>出力</b><span>本文のみ／書誌事項付きのTXTを切り替えて保存できます。</span></div>
+        <div class="legend-item"><b>補助</b><span>ログ確認やクリア操作で再実行しやすくしています。</span></div>
+      </div>
+      <div class="controls">
+        <input id="fileInput" class="visually-hidden" type="file" accept="application/pdf,.pdf">
+        <label class="file-label" for="fileInput"><span class="btn-icon" aria-hidden="true">＋</span>PDFを選択</label>
+        <button id="downloadBtn" type="button" disabled><span class="btn-icon" aria-hidden="true">↓</span>TXTダウンロード</button>
+        <button id="clearBtn" type="button"><span class="btn-icon" aria-hidden="true">×</span>クリア</button>
+        <span id="fileName" class="filename" aria-live="polite">PDF未選択</span>
+      </div>
+      <div class="ocr-controls" role="group" aria-label="書誌事項OCRとTXT出力設定">
+        <button id="ocrReadBtn" type="button" data-state="idle" disabled aria-live="polite"><span id="ocrReadIcon" class="btn-icon" aria-hidden="true">◎</span><span id="ocrReadLabel">書誌事項OCR読取</span></button>
+        <label class="ocr-option">
+          <input id="includeBibliography" type="checkbox" disabled>
+          <span><b>TXT出力に書誌事項を含める</b><small>書誌事項OCR読取後に切り替えられます。チェックを外すと本文だけの出力へ戻ります。</small></span>
+        </label>
+      </div>
+    </div>
+    <div class="hint-box">
+      <p class="hint">PDF選択時にはOCRを起動しません。「書誌事項OCR読取」を押した場合だけOCRを実行します。OCR結果は誤認識の可能性があるため、登録番号・日付・権利者・IPC・FI・テーマコードは原本と照らし合わせてご確認ください。</p>
+    </div>
+  </section>
+  <section class="grid">
+    <div class="card">
+      <div class="card-title">
+        <h2>変換ログ</h2>
+        <span class="section-tag section-process">LOG</span>
+      </div>
+      <p class="card-subtitle">PDF.jsの抽出状況と、ボタンで開始した場合のOCR進捗を確認できます。</p>
+      <div class="log-shell"><div id="log" class="log" role="log" aria-live="polite" aria-relevant="additions"></div></div>
+      <div id="summary" class="meta" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <h2>抽出結果プレビュー</h2>
+        <span class="section-tag section-output">PREVIEW</span>
+      </div>
+      <p class="card-subtitle">現在選択している出力形式の冒頭をプレビュー表示します。</p>
+      <div class="preview-shell"><textarea id="preview" readonly aria-label="抽出結果プレビュー" placeholder="変換後、ここに本文の冒頭が表示されます。"></textarea></div>
+      <div class="footer-note">書誌事項付きプレビューの「（OCR推定）」表記は確認用です。TXT保存時には削除されます。</div>
+      <details id="ocrDetails" class="ocr-details" hidden>
+        <summary>OCRの生テキスト・対象画像を確認</summary>
+        <div class="ocr-debug-grid">
+          <div><h3>書誌事項OCR</h3><pre id="ocrRaw"></pre></div>
+          <div><h3>IPC / FI / テーマコード OCR</h3><pre id="classOcrRaw"></pre></div>
+        </div>
+        <div id="ocrImages" class="ocr-images"></div>
+      </details>
+    </div>
+  </section>
+</main>
+<script defer src="./local_assets/vendor/pdfjs/pdf.min.js"></script>
+<script defer src="./local_assets/vendor/tesseract/tesseract.min.js"></script>
+<script defer src="./local_assets/data/runtime-binaries.js"></script>
+<script defer src="./local_assets/data/tessdata-jpn.js"></script>
+<script defer src="./local_assets/data/tessdata-eng.js"></script>
+<script defer src="./local_assets/data/pdf-support-data.js"></script>
+<script defer src="./local_assets/js/offline-runtime.js"></script>
+<script defer src="./local_assets/js/app.js"></script>
+</body>
+</html>
