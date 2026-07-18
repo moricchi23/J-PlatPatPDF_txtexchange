@@ -1,0 +1,10 @@
+同梱ライブラリ・データ
+
+- PDF.js / pdfjs-dist 3.11.174: Apache License 2.0
+- Tesseract.js 5.1.1: Apache License 2.0
+- tesseract.js-core 5.1.1: Apache License 2.0
+- @tesseract.js-data/jpn 1.0.0: npmパッケージメタデータ上 MIT
+- @tesseract.js-data/eng 1.0.0: npmパッケージメタデータ上 MIT
+- Noto Sans JP（動作確認用PDFへの埋込フォント）: SIL Open Font License 1.1
+
+各ライセンス本文はこのフォルダー内の個別ファイルを参照してください。
